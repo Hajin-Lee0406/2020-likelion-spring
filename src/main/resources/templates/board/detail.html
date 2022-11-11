@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>상세 페이지</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
+</head>
+<body>
+
+<h2 th:text="${boardResponseDto.title}"></h2>
+<p th:text="${boardResponseDto.writer}"></p>
+<p th:inline="text">작성일 : [[${#temporals.format(boardResponseDto.createdTime, 'yyyy-MM-dd HH:mm')}]]</p>
+<p th:inline="text">수정일 : [[${#temporals.format(boardResponseDto.modifiedTime, 'yyyy-MM-dd HH:mm')}]]</p>
+<p th:text="${boardResponseDto.contents}"></p>
+
+<a th:href="@{'/post/edit/'+ ${boardResponseDto.id}}" sec:authorize="isAuthenticated()"
+   th:if="${#authentication.getPrincipal().getUsername() == boardResponseDto.writer}">
+    <buttton> 수정 </buttton>
+</a>
+
+<form th:action="@{'/post/delete/'+ ${boardResponseDto.id}}" sec:authorize="isAuthenticated()" th:method="delete" >
+    <button type="submit">삭제</button>
+</form>
+
+<br>
+<form th:action="@{'/comment/'+ ${boardResponseDto.id}}" sec:authorize="isAuthenticated()" th:method="post">
+    <hr>
+    <div> Write a Comment</div>
+    <div class="card-body">
+        <textarea id="comment" name="comment" rows="4" placeholder="댓글을 입력하세요"></textarea>
+    </div>
+    <button type="submit">댓글 등록</button>
+</form>
+<br>
+<hr>
+
+<p sec:authorize="isAnonymous()"> <a th:href="@{/user/login}">로그인</a> 후 댓글 등록이 가능합니다. </p>
+
+<table>
+    <thead>
+    <tr>
+        <th>작성자</th>
+        <th>댓글</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    <tr th:each="comment : ${comments}">
+        <td>
+            <span th:text="${comment.writer}"></span>
+        </td>
+        <td>
+            <span th:id="|${comment.id}-comment|" th:text="${comment.comment}"></span>
+            <textarea th:hidden="true" th:id="|${comment.id}-textarea|" th:text="${comment.comment}"></textarea>
+        </td>
+        <td>
+            <button  th:id="|${comment.id}-editButton|" sec:authorize="isAuthenticated()"
+                     th:if="${#authentication.getPrincipal().getUsername() == comment.writer}" th:onclick="|editComment(${comment.id})|">수정</button>
+            <button  th:hidden="true" th:id="|${comment.id}-submitButton|" sec:authorize="isAuthenticated()"
+                     th:if="${#authentication.getPrincipal().getUsername() == comment.writer}" th:onclick="|submitEditComment(${boardResponseDto.id}, ${comment.id})|">수정</button>
+        </td>
+        <td>
+            <form th:action="@{'/comment/' + ${boardResponseDto.id} + '/' + ${comment.id}}" sec:authorize="isAuthenticated()"
+                  th:if="${#authentication.getPrincipal().getUsername() == comment.writer}" th:method="delete" >
+                <button type="submit">삭제</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+<script>
+   function editComment(id){
+       $(`#${id}-textarea`).show();
+       $(`#${id}-submitButton`).show();
+       $(`#${id}-editButton`).hide();
+       $(`#${id}-comment`).hide();
+
+       let comment = $(`#${id}-comment`).text().trim();
+       $(`#${id}-textarea`).val(comment);
+   }
+
+    function submitEditComment(board_id, comment_id){
+        let comment = $(`#${comment_id}-textarea`).val().trim();
+
+        if(comment == null || comment.length === 0){
+            return;
+        }
+
+        $.ajax({
+            type: "PUT",
+            url: `/comment/${board_id}/${comment_id}`,
+            data: {
+                "comment": comment
+            },
+            beforeSend: function (jqXHR, settings) {
+                var header = $("meta[name='_csrf_header']").attr("content");
+                var token = $("meta[name='_csrf']").attr("content");
+                jqXHR.setRequestHeader(header, token);
+            },
+            success: function (response){
+                alert('댓글 수정에 성공하였습니다');
+                window.location.reload();
+            }
+        })
+    }
+</script>
+</body>
+</html>

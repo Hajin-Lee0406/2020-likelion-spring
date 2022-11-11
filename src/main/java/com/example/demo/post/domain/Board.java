@@ -1,14 +1,12 @@
 package com.example.demo.post.domain;
 
-import lombok.AllArgsConstructor;
+import com.example.demo.post.dto.BoardRequestDto;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import javax.persistence.*;
-import java.sql.Timestamp;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -26,10 +24,23 @@ public class Board extends BaseTimeEntity{
     @Column(nullable = false)
     private String contents;
 
+    @Column(nullable = false)
+    private String writer;
+
+    @OneToMany(mappedBy = "board", fetch = FetchType.EAGER, cascade = CascadeType.REMOVE)
+    @OrderBy("id asc") // 정렬
+    private List<Comment> comments;
+
     @Builder
-    public Board(Long id, String title, String contents){
+    public Board(Long id, String title, String contents, String writer){
         this.id = id;
         this.title = title;
         this.contents = contents;
+        this.writer = writer;
+    }
+
+    public void update(BoardRequestDto boardDto){
+        this.title = boardDto.getTitle();
+        this.contents = boardDto.getContents();
     }
 }
